@@ -16,14 +16,15 @@ type Config struct {
 	} `yaml:"build"`
 
 	Thresholds struct {
-		MaxDirectDepsAdded            int   `yaml:"max_direct_deps_added"`
-		MaxTransitivePackagesAdded    int   `yaml:"max_transitive_packages_added"`
-		MaxBinarySizeIncreaseBytes    int64 `yaml:"max_binary_size_increase_bytes"`
-		MaxBinarySizeIncreasePercent  int   `yaml:"max_binary_size_increase_percent"`
+		MaxDirectDepsAdded           int   `yaml:"max_direct_deps_added"`
+		MaxTransitivePackagesAdded   int   `yaml:"max_transitive_packages_added"`
+		MaxBinarySizeIncreaseBytes   int64 `yaml:"max_binary_size_increase_bytes"`
+		MaxBinarySizeIncreasePercent int   `yaml:"max_binary_size_increase_percent"`
 	} `yaml:"thresholds"`
 
 	Policies struct {
 		BlockedModules               []string `yaml:"blocked_modules"`
+		AllowedModules               []string `yaml:"allowed_modules"`
 		WarnOnIndirectOnlyGrowth     bool     `yaml:"warn_on_indirect_only_growth"`
 		RequireReasonForNewDirectDep bool     `yaml:"require_reason_for_new_direct_dep"`
 	} `yaml:"policies"`

@@ -59,12 +59,36 @@ func Evaluate(delta *types.Delta, cfg *config.Config) *types.PolicyResult {
 			if blockedMap[m.Path] {
 				addError(fmt.Sprintf("Added module %s which is on the blocked list", m.Path))
 			} else {
-				// Checking if added module matches prefix (e.g. github.com/aws/aws-sdk-go matching github.com/aws/aws-sdk-go/v2/service/s3)
 				for _, b := range cfg.Policies.BlockedModules {
 					if strings.HasPrefix(m.Path, b) {
 						addError(fmt.Sprintf("Added module %s which matches blocked prefix %s", m.Path, b))
 					}
 				}
+			}
+		}
+	}
+
+	// Allowed modules (Strict Allowlist Mode)
+	if len(cfg.Policies.AllowedModules) > 0 {
+		allowedMap := make(map[string]bool)
+		for _, a := range cfg.Policies.AllowedModules {
+			allowedMap[a] = true
+		}
+
+		for _, m := range delta.AddedModules {
+			isAllowed := false
+			if allowedMap[m.Path] {
+				isAllowed = true
+			} else {
+				for _, a := range cfg.Policies.AllowedModules {
+					if strings.HasPrefix(m.Path, a) {
+						isAllowed = true
+						break
+					}
+				}
+			}
+			if !isAllowed && !m.Indirect {
+				addError(fmt.Sprintf("Added module %s is not on the allowed list. Strict allowlist is enabled.", m.Path))
 			}
 		}
 	}
