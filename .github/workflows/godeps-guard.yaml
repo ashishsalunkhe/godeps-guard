@@ -1,0 +1,26 @@
+name: godeps-guard
+
+on:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Build godeps-guard
+        run: go install github.com/ashishsalunkhe/godeps-guard/cmd/godeps-guard@latest
+
+      - name: Run dependency guard
+        run: |
+          godeps-guard check \\
+            --base origin/${{ github.base_ref }} \\
+            --config .godepsguard.yaml \\
+            --format markdown >> $GITHUB_STEP_SUMMARY

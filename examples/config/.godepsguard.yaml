@@ -1,0 +1,22 @@
+build:
+  target: ./cmd/godeps-guard
+  output: /tmp/app
+  ldflags:
+    - "-s"
+    - "-w"
+
+thresholds:
+  max_direct_deps_added: 2
+  max_transitive_packages_added: 40
+  max_binary_size_increase_bytes: 5242880
+  max_binary_size_increase_percent: 8
+
+policies:
+  blocked_modules:
+    - github.com/aws/aws-sdk-go
+  warn_on_indirect_only_growth: true
+  require_reason_for_new_direct_dep: true
+
+report:
+  format: markdown
+  verbose: true
