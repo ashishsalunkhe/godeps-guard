@@ -8,22 +8,18 @@ import (
 func Compare(base, head *types.Snapshot) *types.Delta {
 	delta := &types.Delta{}
 
-	// Map base modules by path
 	baseModules := make(map[string]types.ModuleRef)
 	for _, m := range base.Modules {
 		baseModules[m.Path] = m
 	}
 
-	// Map head modules by path
 	headModules := make(map[string]types.ModuleRef)
 	for _, m := range head.Modules {
 		headModules[m.Path] = m
 	}
 
-	// Find added and changed modules
 	for path, headMod := range headModules {
 		if baseMod, exists := baseModules[path]; exists {
-			// Exists in both, check for change
 			if headMod.Version != baseMod.Version {
 				delta.ChangedModules = append(delta.ChangedModules, types.ModuleChange{
 					Path:   path,
@@ -32,26 +28,66 @@ func Compare(base, head *types.Snapshot) *types.Delta {
 				})
 			}
 		} else {
-			// Exists only in head -> Added
 			delta.AddedModules = append(delta.AddedModules, headMod)
 		}
 	}
 
-	// Find removed modules
 	for path, baseMod := range baseModules {
 		if _, exists := headModules[path]; !exists {
 			delta.RemovedModules = append(delta.RemovedModules, baseMod)
 		}
 	}
 
-	// Calculate package differences simply by counting for now
-	delta.AddedPackages = len(head.Packages) - len(base.Packages)
-	if delta.AddedPackages < 0 {
-		delta.RemovedPackages = -delta.AddedPackages
-		delta.AddedPackages = 0
+	basePkgs := make(map[string]bool)
+	for _, p := range base.Packages {
+		basePkgs[p.ImportPath] = true
 	}
 
-	// Binary size metrics (we'll implement this fully in Milestone 3)
+	headPkgs := make(map[string]types.PackageNode)
+	for _, p := range head.Packages {
+		headPkgs[p.ImportPath] = p
+	}
+
+	var addedPkgs []types.PackageNode
+	for path, p := range headPkgs {
+		if !basePkgs[path] {
+			addedPkgs = append(addedPkgs, p)
+		}
+	}
+
+	var removedPkgs []string
+	for path := range basePkgs {
+		if _, exists := headPkgs[path]; !exists {
+			removedPkgs = append(removedPkgs, path)
+		}
+	}
+
+	delta.AddedPackages = len(addedPkgs)
+	delta.RemovedPackages = len(removedPkgs)
+
+	// Dependency attribution (Blame)
+	// For every added *direct* module, how many packages in addedPkgs belong to it?
+	for _, addedMod := range delta.AddedModules {
+		if !addedMod.Indirect {
+			impact := types.ModuleImpact{
+				Module: addedMod,
+			}
+
+			// Simple attribution: How many packages in the graph share this module path?
+			// Note: true blame of transitives is complicated (who imported the transitive?)
+			// For v1.1, we count packages belonging exactly to this module path
+			pkgCount := 0
+			for _, p := range addedPkgs {
+				if p.ModulePath == addedMod.Path {
+					pkgCount++
+				}
+			}
+
+			impact.AddedPackages = pkgCount
+			delta.DirectImpacts = append(delta.DirectImpacts, impact)
+		}
+	}
+
 	delta.BinarySizeBefore = base.BinarySize
 	delta.BinarySizeAfter = head.BinarySize
 	delta.BinarySizeDelta = head.BinarySize - base.BinarySize

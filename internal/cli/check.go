@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	checkBase   string
-	checkFormat string
-	checkConfig string
+	checkBase    string
+	checkFormat  string
+	checkConfig  string
+	checkComment bool
 )
 
 var checkCmd = &cobra.Command{
@@ -60,7 +61,12 @@ var checkCmd = &cobra.Command{
 		polRes := policy.Evaluate(delta, cfg)
 
 		// 5. Output Report
-		err = report.Output(delta, polRes, checkFormat, os.Stdout)
+		if checkComment {
+			err = report.OutputComment(delta, polRes, os.Stdout)
+		} else {
+			err = report.Output(delta, polRes, checkFormat, os.Stdout)
+		}
+
 		if err != nil {
 			return fmt.Errorf("failed to render report: %w", err)
 		}
@@ -78,6 +84,7 @@ func init() {
 	checkCmd.Flags().StringVar(&checkBase, "base", "", "Base git ref (e.g. origin/main)")
 	checkCmd.Flags().StringVar(&checkConfig, "config", ".godepsguard.yaml", "Path to config file")
 	checkCmd.Flags().StringVar(&checkFormat, "format", "markdown", "Output format (markdown, json)")
-	
+	checkCmd.Flags().BoolVar(&checkComment, "comment", false, "Output a condensed Markdown format ideal for PR comments")
+
 	rootCmd.AddCommand(checkCmd)
 }

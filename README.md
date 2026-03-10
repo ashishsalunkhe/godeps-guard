@@ -1,6 +1,8 @@
 # godeps-guard
 
-A Go dependency impact analyzer and CI enforcement tool that prevents binary bloat and dependency sprawl.
+> Prevent dependency sprawl and binary bloat in Go services before it reaches production.
+
+A Go dependency impact analyzer and CI enforcement tool.
 
 ## Features
 
@@ -62,3 +64,11 @@ godeps-guard check --base origin/main --config .godepsguard.yaml
 ### Other Commands
 - `godeps-guard scan` - Capture dependency snapshot for current checkout
 - `godeps-guard diff` - Compare two independent snapshots using locally saved json models.
+
+## Roadmap
+- [ ] Dependency Impact Attribution (Blame & Transitive calculation)
+- [ ] PR Comment Mode (`--comment` flag)
+- [ ] Historical Tracking
+- [ ] Risk Scoring Mechanism
+- [ ] SBOM and License Generation
+- [ ] Dependency Graph Visualization

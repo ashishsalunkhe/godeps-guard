@@ -10,9 +10,9 @@ type ModuleRef struct {
 
 // ModuleChange represents the change in version for a specific module.
 type ModuleChange struct {
-	Path    string `json:"path"`
-	Before  string `json:"before"`
-	After   string `json:"after"`
+	Path   string `json:"path"`
+	Before string `json:"before"`
+	After  string `json:"after"`
 }
 
 // PackageNode represents a package in the dependency graph.
@@ -32,6 +32,14 @@ type Snapshot struct {
 	Target     string        `json:"target"`
 }
 
+// ModuleImpact stores blame and transitive size logic for a direct module addition.
+type ModuleImpact struct {
+	Module        ModuleRef `json:"module"`
+	AddedPackages int       `json:"added_packages"`
+	// BinarySizeDelta estimation is hard per-module without full compile of each,
+	// but we can structure the struct for future risk scoring.
+}
+
 // Delta represents the difference between two Snapshots.
 type Delta struct {
 	AddedModules       []ModuleRef    `json:"added_modules"`
@@ -43,6 +51,9 @@ type Delta struct {
 	BinarySizeAfter    int64          `json:"binary_size_after"`
 	BinarySizeDelta    int64          `json:"binary_size_delta"`
 	BinaryDeltaPercent float64        `json:"binary_delta_percent"`
+
+	// Post-v1 Attribution
+	DirectImpacts []ModuleImpact `json:"direct_impacts"`
 }
 
 // PolicyResult holds the results of evaluating the rules.
