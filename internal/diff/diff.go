@@ -1,6 +1,7 @@
 package diff
 
 import (
+	"github.com/ashishsalunkhe/godeps-guard/internal/policy"
 	"github.com/ashishsalunkhe/godeps-guard/pkg/types"
 )
 
@@ -84,6 +85,10 @@ func Compare(base, head *types.Snapshot) *types.Delta {
 			}
 
 			impact.AddedPackages = pkgCount
+
+			// Post-v1: Calculate Risk
+			policy.CalculateRisk(&impact)
+
 			delta.DirectImpacts = append(delta.DirectImpacts, impact)
 		}
 	}

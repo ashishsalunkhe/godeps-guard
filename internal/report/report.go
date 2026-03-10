@@ -26,11 +26,19 @@ func OutputComment(delta *types.Delta, policy *types.PolicyResult, out io.Writer
 	fmt.Fprintln(out, "## Dependency Impact Report")
 	fmt.Fprintln(out)
 
+	fmt.Fprintln(out, "### New Direct Dependencies")
 	if len(delta.DirectImpacts) > 0 {
-		fmt.Fprintln(out, "### New Direct Dependencies")
 		for _, impact := range delta.DirectImpacts {
-			fmt.Fprintf(out, "- **%s**\\n", impact.Module.Path)
+			fmt.Fprintf(out, "- **%s** (Risk: %d/10)\\n", impact.Module.Path, impact.RiskScore)
+			if len(impact.RiskReasons) > 0 {
+				for _, r := range impact.RiskReasons {
+					fmt.Fprintf(out, "  - %s\\n", r)
+				}
+			}
 		}
+		fmt.Fprintln(out)
+	} else {
+		fmt.Fprintln(out, "No new direct dependencies.")
 		fmt.Fprintln(out)
 	}
 
@@ -120,7 +128,10 @@ func writeMarkdown(delta *types.Delta, policy *types.PolicyResult, out io.Writer
 		fmt.Fprintln(out)
 		fmt.Fprintln(out, "### New Direct Dependencies")
 		for _, impact := range delta.DirectImpacts {
-			fmt.Fprintf(out, "- **%s** `%s`\\n", impact.Module.Path, impact.Module.Version)
+			fmt.Fprintf(out, "- **%s** `%s` (Risk: %d/10)\\n", impact.Module.Path, impact.Module.Version, impact.RiskScore)
+			for _, r := range impact.RiskReasons {
+				fmt.Fprintf(out, "  - %s\\n", r)
+			}
 		}
 
 		fmt.Fprintln(out)

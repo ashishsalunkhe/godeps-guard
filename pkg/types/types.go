@@ -36,6 +36,8 @@ type Snapshot struct {
 type ModuleImpact struct {
 	Module        ModuleRef `json:"module"`
 	AddedPackages int       `json:"added_packages"`
+	RiskScore     int       `json:"risk_score"`
+	RiskReasons   []string  `json:"risk_reasons"`
 	// BinarySizeDelta estimation is hard per-module without full compile of each,
 	// but we can structure the struct for future risk scoring.
 }
