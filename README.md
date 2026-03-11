@@ -55,6 +55,29 @@ report:
 
 See `.github/workflows/godeps-guard.yaml` for a working GitHub actions pipeline.
 
+You can use `godeps-guard` easily via the GitHub Action. Create a `.github/workflows/godeps-guard.yaml`:
+
+```yaml
+name: godeps-guard
+
+on:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run godeps-guard
+        uses: ashishsalunkhe/godeps-guard@v1
+        with:
+          base_ref: origin/${{ github.base_ref }}
+          config: .godepsguard.yaml
+```
+
 Or manually run:
 
 \`\`\`bash

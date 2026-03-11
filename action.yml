@@ -1,0 +1,46 @@
+name: "godeps-guard"
+description: "A Go dependency impact analyzer and CI enforcement tool to prevent binary bloat."
+author: "Ashish Salunkhe"
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  base_ref:
+    description: "The base reference (e.g., origin/main) to compare dependencies against."
+    required: true
+    default: "origin/main"
+  config:
+    description: "Path to the .godepsguard.yaml configuration file."
+    required: false
+    default: ".godepsguard.yaml"
+  version:
+    description: "The version of godeps-guard to install (e.g., latest or a specific tag)."
+    required: false
+    default: "latest"
+  args:
+    description: "Any extra arguments to pass to godeps-guard check."
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: Install godeps-guard
+      shell: bash
+      run: go install github.com/ashishsalunkhe/godeps-guard/cmd/godeps-guard@${{ inputs.version }}
+
+    - name: Run godeps-guard
+      shell: bash
+      run: |
+        godeps-guard check \
+          --base ${{ inputs.base_ref }} \
+          --config ${{ inputs.config }} \
+          --format markdown \
+          ${{ inputs.args }} >> $GITHUB_STEP_SUMMARY
