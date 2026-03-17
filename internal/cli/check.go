@@ -8,6 +8,7 @@ import (
 	"github.com/ashishsalunkhe/godeps-guard/internal/diff"
 	"github.com/ashishsalunkhe/godeps-guard/internal/git"
 	"github.com/ashishsalunkhe/godeps-guard/internal/graph"
+	"github.com/ashishsalunkhe/godeps-guard/internal/license"
 	"github.com/ashishsalunkhe/godeps-guard/internal/policy"
 	"github.com/ashishsalunkhe/godeps-guard/internal/report"
 	"github.com/spf13/cobra"
@@ -54,13 +55,16 @@ var checkCmd = &cobra.Command{
 			return fmt.Errorf("failed to snapshot base: %w", err)
 		}
 
-		// 3. Diff Snapshots
-		delta := diff.Compare(baseSnap, headSnap)
+		// 3. Detect licenses for risk scoring
+		licenses := license.DetectMap(headSnap.Modules)
 
-		// 4. Enforce Policy
-		polRes := policy.Evaluate(delta, cfg)
+		// 4. Diff Snapshots
+		delta := diff.Compare(baseSnap, headSnap, licenses, cfg.Policies.HeavyVendorPatterns)
 
-		// 5. Output Report
+		// 5. Enforce Policy
+		polRes := policy.Evaluate(delta, cfg, licenses)
+
+		// 6. Output Report
 		if checkComment {
 			err = report.OutputComment(delta, polRes, os.Stdout)
 		} else {
@@ -71,7 +75,7 @@ var checkCmd = &cobra.Command{
 			return fmt.Errorf("failed to render report: %w", err)
 		}
 
-		// 6. Fail CI if policy breached
+		// 7. Fail CI if policy breached
 		if !polRes.Passed {
 			os.Exit(1)
 		}

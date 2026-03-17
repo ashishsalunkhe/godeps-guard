@@ -34,12 +34,11 @@ type Snapshot struct {
 
 // ModuleImpact stores blame and transitive size logic for a direct module addition.
 type ModuleImpact struct {
-	Module        ModuleRef `json:"module"`
-	AddedPackages int       `json:"added_packages"`
-	RiskScore     int       `json:"risk_score"`
-	RiskReasons   []string  `json:"risk_reasons"`
-	// BinarySizeDelta estimation is hard per-module without full compile of each,
-	// but we can structure the struct for future risk scoring.
+	Module            ModuleRef `json:"module"`
+	AddedPackages     int       `json:"added_packages"`
+	TransitiveModules []string  `json:"transitive_modules,omitempty"`
+	RiskScore         int       `json:"risk_score"`
+	RiskReasons       []string  `json:"risk_reasons"`
 }
 
 // Delta represents the difference between two Snapshots.

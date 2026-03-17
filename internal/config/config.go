@@ -20,11 +20,14 @@ type Config struct {
 		MaxTransitivePackagesAdded   int   `yaml:"max_transitive_packages_added"`
 		MaxBinarySizeIncreaseBytes   int64 `yaml:"max_binary_size_increase_bytes"`
 		MaxBinarySizeIncreasePercent int   `yaml:"max_binary_size_increase_percent"`
+		MaxRiskScore                 int   `yaml:"max_risk_score"`
 	} `yaml:"thresholds"`
 
 	Policies struct {
 		BlockedModules               []string `yaml:"blocked_modules"`
 		AllowedModules               []string `yaml:"allowed_modules"`
+		BlockedLicenses              []string `yaml:"blocked_licenses"`
+		HeavyVendorPatterns          []string `yaml:"heavy_vendor_patterns"`
 		WarnOnIndirectOnlyGrowth     bool     `yaml:"warn_on_indirect_only_growth"`
 		RequireReasonForNewDirectDep bool     `yaml:"require_reason_for_new_direct_dep"`
 	} `yaml:"policies"`

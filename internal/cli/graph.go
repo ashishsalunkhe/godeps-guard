@@ -9,11 +9,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var graphOutput string
+var (
+	graphOutput string
+	graphFormat string
+	graphFilter string
+)
 
 var graphCmd = &cobra.Command{
 	Use:   "graph",
-	Short: "Generate dependency visualization (Graphviz DOT format)",
+	Short: "Generate dependency graph visualization",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, _ := config.Load(".godepsguard.yaml")
 
@@ -33,24 +37,20 @@ var graphCmd = &cobra.Command{
 			out = f
 		}
 
-		fmt.Fprintln(out, "digraph godeps {")
-		fmt.Fprintln(out, "  node [shape=box, style=rounded];")
-
-		fmt.Fprintf(out, "  \"%s\";\n", "app")
-
-		for _, m := range snap.Modules {
-			if !m.Indirect {
-				fmt.Fprintf(out, "  \"%s\" -> \"%s\";\n", "app", m.Path)
-			}
+		switch graphFormat {
+		case "mermaid":
+			graph.RenderMermaid(snap, graphFilter, out)
+		default:
+			graph.RenderDOT(snap, graphFilter, out)
 		}
 
-		// In a fully developed visualization, you would iterate the actual package import graph
-		// and graph every individual node here. For MVP, we map the direct module graph.
-
-		fmt.Fprintln(out, "}")
-
 		if graphOutput != "" {
-			fmt.Printf("Graphviz DOT written to %s. Render with: dot -Tsvg %s -o graph.svg\n", graphOutput, graphOutput)
+			switch graphFormat {
+			case "mermaid":
+				fmt.Printf("Mermaid graph written to %s\n", graphOutput)
+			default:
+				fmt.Printf("Graphviz DOT written to %s. Render with: dot -Tsvg %s -o graph.svg\n", graphOutput, graphOutput)
+			}
 		}
 
 		return nil
@@ -58,6 +58,8 @@ var graphCmd = &cobra.Command{
 }
 
 func init() {
-	graphCmd.Flags().StringVar(&graphOutput, "output", "", "Output file for dot format (e.g., graph.dot).")
+	graphCmd.Flags().StringVar(&graphOutput, "output", "", "Output file (e.g., graph.dot or graph.md)")
+	graphCmd.Flags().StringVar(&graphFormat, "format", "dot", "Output format (dot, mermaid)")
+	graphCmd.Flags().StringVar(&graphFilter, "filter", "", "Filter to modules matching this prefix (e.g., github.com/aws)")
 	rootCmd.AddCommand(graphCmd)
 }

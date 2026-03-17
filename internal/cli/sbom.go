@@ -6,6 +6,7 @@ import (
 
 	"github.com/ashishsalunkhe/godeps-guard/internal/config"
 	"github.com/ashishsalunkhe/godeps-guard/internal/graph"
+	"github.com/ashishsalunkhe/godeps-guard/internal/license"
 	"github.com/ashishsalunkhe/godeps-guard/internal/sbom"
 	"github.com/spf13/cobra"
 )
@@ -24,6 +25,9 @@ var sbomCmd = &cobra.Command{
 			return fmt.Errorf("failed to generate snapshot: %w", err)
 		}
 
+		// Detect licenses to enrich SBOM
+		licenses := license.DetectMap(snap.Modules)
+
 		out := os.Stdout
 		if sbomOutput != "" {
 			f, err := os.Create(sbomOutput)
@@ -34,12 +38,12 @@ var sbomCmd = &cobra.Command{
 			out = f
 		}
 
-		if err := sbom.CycloneDX(snap, out); err != nil {
+		if err := sbom.CycloneDX(snap, licenses, out); err != nil {
 			return fmt.Errorf("failed to encode SBOM: %w", err)
 		}
 
 		if sbomOutput != "" {
-			fmt.Printf("SBOM written to %s\\n", sbomOutput)
+			fmt.Printf("SBOM written to %s\n", sbomOutput)
 		}
 
 		return nil

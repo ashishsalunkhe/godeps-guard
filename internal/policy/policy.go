@@ -9,7 +9,8 @@ import (
 )
 
 // Evaluate checks the delta against the provided configuration.
-func Evaluate(delta *types.Delta, cfg *config.Config) *types.PolicyResult {
+// licenses is an optional map of modulePath -> license identifier.
+func Evaluate(delta *types.Delta, cfg *config.Config, licenses map[string]string) *types.PolicyResult {
 	result := &types.PolicyResult{
 		Passed: true,
 	}
@@ -48,6 +49,15 @@ func Evaluate(delta *types.Delta, cfg *config.Config) *types.PolicyResult {
 		addError(fmt.Sprintf("Binary size increased by %.2f%%, which exceeds the limit of %d%%", delta.BinaryDeltaPercent, cfg.Thresholds.MaxBinarySizeIncreasePercent))
 	}
 
+	// Max risk score enforcement
+	if cfg.Thresholds.MaxRiskScore > 0 {
+		for _, impact := range delta.DirectImpacts {
+			if impact.RiskScore > cfg.Thresholds.MaxRiskScore {
+				addError(fmt.Sprintf("Module %s has risk score %d, which exceeds the limit of %d", impact.Module.Path, impact.RiskScore, cfg.Thresholds.MaxRiskScore))
+			}
+		}
+	}
+
 	// Blocked modules
 	if len(cfg.Policies.BlockedModules) > 0 {
 		blockedMap := make(map[string]bool)
@@ -63,6 +73,22 @@ func Evaluate(delta *types.Delta, cfg *config.Config) *types.PolicyResult {
 					if strings.HasPrefix(m.Path, b) {
 						addError(fmt.Sprintf("Added module %s which matches blocked prefix %s", m.Path, b))
 					}
+				}
+			}
+		}
+	}
+
+	// Blocked licenses enforcement
+	if len(cfg.Policies.BlockedLicenses) > 0 && licenses != nil {
+		blockedLicSet := make(map[string]bool)
+		for _, bl := range cfg.Policies.BlockedLicenses {
+			blockedLicSet[strings.ToUpper(bl)] = true
+		}
+
+		for _, m := range delta.AddedModules {
+			if lic, ok := licenses[m.Path]; ok {
+				if blockedLicSet[strings.ToUpper(lic)] {
+					addError(fmt.Sprintf("Module %s has blocked license: %s", m.Path, lic))
 				}
 			}
 		}

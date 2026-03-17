@@ -35,7 +35,7 @@ var diffCmd = &cobra.Command{
 			return fmt.Errorf("failed to load head snapshot: %w", err)
 		}
 
-		delta := diff.Compare(baseSnap, headSnap)
+		delta := diff.Compare(baseSnap, headSnap, nil, nil)
 
 		return report.Output(delta, nil, diffFormat, os.Stdout)
 	},
@@ -57,6 +57,6 @@ func init() {
 	diffCmd.Flags().StringVar(&diffBase, "base", "", "Path to base snapshot.json")
 	diffCmd.Flags().StringVar(&diffHead, "head", "", "Path to head snapshot.json")
 	diffCmd.Flags().StringVar(&diffFormat, "format", "markdown", "Output format (markdown, json)")
-	
+
 	rootCmd.AddCommand(diffCmd)
 }
