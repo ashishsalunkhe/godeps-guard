@@ -87,7 +87,7 @@ var checkCmd = &cobra.Command{
 func init() {
 	checkCmd.Flags().StringVar(&checkBase, "base", "", "Base git ref (e.g. origin/main)")
 	checkCmd.Flags().StringVar(&checkConfig, "config", ".godepsguard.yaml", "Path to config file")
-	checkCmd.Flags().StringVar(&checkFormat, "format", "markdown", "Output format (markdown, json)")
+	checkCmd.Flags().StringVar(&checkFormat, "format", "terminal", "Output format (terminal, markdown, json)")
 	checkCmd.Flags().BoolVar(&checkComment, "comment", false, "Output a condensed Markdown format ideal for PR comments")
 
 	rootCmd.AddCommand(checkCmd)

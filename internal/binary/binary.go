@@ -8,13 +8,15 @@ import (
 
 // MeasureSize builds the target package and returns the binary size in bytes.
 func MeasureSize(dir string, target string, outputPath string, ldflags []string) (int64, error) {
-	// e.g. go build -o /tmp/app -ldflags="-s -w" ./cmd/api
+	// If target is "./...", binary size measurement isn't meaningful for a single output file.
+	// We skip measurement to avoid "multiple packages" errors from Go.
+	if target == "./..." || target == "../..." {
+		return 0, nil
+	}
+
 	args := []string{"build", "-o", outputPath}
 
 	if len(ldflags) > 0 {
-		// we combine flags if requested, or just pass them
-		// simple implementation: pass them as standard arguments
-		// usually they come in like -ldflags "-s -w", so we just append.
 		args = append(args, "-ldflags")
 		flagsStr := ""
 		for i, f := range ldflags {
@@ -30,7 +32,8 @@ func MeasureSize(dir string, target string, outputPath string, ldflags []string)
 
 	cmd := exec.Command("go", args...)
 	cmd.Dir = dir
-	cmd.Stderr = os.Stderr
+	// We don't pipe to os.Stderr here to avoid noise in the CLI
+	// unless the user explicitly wants to debug build failures.
 
 	if err := cmd.Run(); err != nil {
 		return 0, fmt.Errorf("failed to build %s: %w", target, err)

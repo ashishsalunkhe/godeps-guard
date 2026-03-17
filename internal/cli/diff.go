@@ -56,7 +56,7 @@ func loadSnapshot(path string) (*types.Snapshot, error) {
 func init() {
 	diffCmd.Flags().StringVar(&diffBase, "base", "", "Path to base snapshot.json")
 	diffCmd.Flags().StringVar(&diffHead, "head", "", "Path to head snapshot.json")
-	diffCmd.Flags().StringVar(&diffFormat, "format", "markdown", "Output format (markdown, json)")
+	diffCmd.Flags().StringVar(&diffFormat, "format", "terminal", "Output format (terminal, markdown, json)")
 
 	rootCmd.AddCommand(diffCmd)
 }

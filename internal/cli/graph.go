@@ -6,6 +6,9 @@ import (
 
 	"github.com/ashishsalunkhe/godeps-guard/internal/config"
 	"github.com/ashishsalunkhe/godeps-guard/internal/graph"
+	"github.com/ashishsalunkhe/godeps-guard/internal/license"
+	"github.com/ashishsalunkhe/godeps-guard/internal/policy"
+	"github.com/ashishsalunkhe/godeps-guard/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -27,6 +30,10 @@ var graphCmd = &cobra.Command{
 			return fmt.Errorf("failed to generate snapshot: %w", err)
 		}
 
+		// Detect licenses and calculate risks for visualization
+		licenses := license.DetectMap(snap.Modules)
+		risks := calculateCurrentRisks(snap, licenses, cfg.Policies.HeavyVendorPatterns)
+
 		out := os.Stdout
 		if graphOutput != "" {
 			f, err := os.Create(graphOutput)
@@ -39,9 +46,9 @@ var graphCmd = &cobra.Command{
 
 		switch graphFormat {
 		case "mermaid":
-			graph.RenderMermaid(snap, graphFilter, out)
+			graph.RenderMermaid(snap, graphFilter, risks, out)
 		default:
-			graph.RenderDOT(snap, graphFilter, out)
+			graph.RenderDOT(snap, graphFilter, risks, out)
 		}
 
 		if graphOutput != "" {
@@ -55,6 +62,31 @@ var graphCmd = &cobra.Command{
 
 		return nil
 	},
+}
+
+// calculateCurrentRisks computes risk scores for modules in a static snapshot (no delta).
+func calculateCurrentRisks(snap *types.Snapshot, licenses map[string]string, heavyPatterns []string) map[string]int {
+	risks := make(map[string]int)
+
+	// Build pkg count per module
+	pkgCount := make(map[string]int)
+	for _, p := range snap.Packages {
+		if p.ModulePath != "" {
+			pkgCount[p.ModulePath]++
+		}
+	}
+
+	for _, m := range snap.Modules {
+		impact := &types.ModuleImpact{
+			Module:        m,
+			AddedPackages: pkgCount[m.Path],
+		}
+		// We don't have transitive tracing in static view, but we have fanout and license checks
+		policy.CalculateRisk(impact, licenses, heavyPatterns)
+		risks[m.Path] = impact.RiskScore
+	}
+
+	return risks
 }
 
 func init() {

@@ -4,6 +4,20 @@
 
 A Go dependency impact analyzer and CI enforcement tool.
 
+## Installation
+
+```bash
+go install github.com/ashishsalunkhe/godeps-guard/cmd/godeps-guard@latest
+```
+
+## Quick Start & Examples
+
+We provide a set of [examples](./examples) to help you explore the features immediately after installation.
+
+1. **Try License Detection**: `godeps-guard licenses`
+2. **Visualize your Graph**: `godeps-guard graph --format mermaid`
+3. **Check your Policy**: `godeps-guard check --base origin/main`
+
 ## Features
 
 - Inspects dependency graph changes in a project over time.
@@ -15,12 +29,6 @@ A Go dependency impact analyzer and CI enforcement tool.
   - Blocked vendor patterns are matched
   - Risk score exceeds threshold
   - Blocked licenses are detected
-
-## Installation
-
-```bash
-go install github.com/ashishsalunkhe/godeps-guard/cmd/godeps-guard@latest
-```
 
 ## Usage
 

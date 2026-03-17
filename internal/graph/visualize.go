@@ -11,7 +11,7 @@ import (
 
 // RenderDOT generates a Graphviz DOT format dependency graph from a snapshot.
 // If filter is non-empty, only modules matching the prefix are included.
-func RenderDOT(snap *types.Snapshot, filter string, out io.Writer) {
+func RenderDOT(snap *types.Snapshot, filter string, risks map[string]int, out io.Writer) {
 	// Build module-to-module edges from the package import graph
 	edges, directMods := buildModuleGraph(snap, filter)
 
@@ -21,47 +21,50 @@ func RenderDOT(snap *types.Snapshot, filter string, out io.Writer) {
 	fmt.Fprintln(out, "  edge [color=\"#666666\"];")
 	fmt.Fprintln(out)
 
-	// App root node
 	appModule := getAppModule(snap)
-	fmt.Fprintf(out, "  \"%s\" [fillcolor=\"#4CAF50\", fontcolor=white, label=\"%s\"];\n", appModule, appModule)
+	allModsSorted := getSortedMods(edges)
 
-	// Render nodes with styling based on direct vs indirect
+	// Map modules to safe, anonymous IDs
+	idMap := make(map[string]string)
+	idMap[appModule] = "root"
+	nodeCounter := 1
+	for _, mod := range allModsSorted {
+		if mod != appModule {
+			idMap[mod] = fmt.Sprintf("node_%d", nodeCounter)
+			nodeCounter++
+		}
+	}
+
+	// App root node
+	fmt.Fprintf(out, "  \"%s\" [fillcolor=\"#4CAF50\", fontcolor=white, label=\"%s\"];\n", idMap[appModule], "Project Root")
+
+	// Render nodes with styling based on direct vs indirect and risk
 	rendered := map[string]bool{appModule: true}
-	for mod := range edges {
+	for _, mod := range allModsSorted {
 		if rendered[mod] {
 			continue
 		}
 		rendered[mod] = true
-		if directMods[mod] {
-			fmt.Fprintf(out, "  \"%s\" [fillcolor=\"#BBDEFB\", label=\"%s\"];\n", mod, shortName(mod))
-		} else {
-			fmt.Fprintf(out, "  \"%s\" [fillcolor=\"#FFF9C4\", style=\"rounded,filled,dashed\", label=\"%s\"];\n", mod, shortName(mod))
+		
+		color := getNodeColor(mod, directMods[mod], risks[mod])
+		style := "rounded,filled"
+		if !directMods[mod] {
+			style += ",dashed"
 		}
-	}
-	// Also render target nodes that haven't been rendered as source
-	for _, targets := range edges {
-		for _, t := range targets {
-			if rendered[t] {
-				continue
-			}
-			rendered[t] = true
-			if directMods[t] {
-				fmt.Fprintf(out, "  \"%s\" [fillcolor=\"#BBDEFB\", label=\"%s\"];\n", t, shortName(t))
-			} else {
-				fmt.Fprintf(out, "  \"%s\" [fillcolor=\"#FFF9C4\", style=\"rounded,filled,dashed\", label=\"%s\"];\n", t, shortName(t))
-			}
-		}
+		
+		fmt.Fprintf(out, "  \"%s\" [fillcolor=\"%s\", style=\"%s\", label=\"%s\"];\n", idMap[mod], color, style, shortName(mod))
 	}
 
 	fmt.Fprintln(out)
 
 	// Render edges
-	for from, tos := range edges {
+	for _, from := range allModsSorted {
+		tos := edges[from]
 		for _, to := range tos {
 			if directMods[to] && from == appModule {
-				fmt.Fprintf(out, "  \"%s\" -> \"%s\" [color=\"#1976D2\", penwidth=2];\n", from, to)
+				fmt.Fprintf(out, "  \"%s\" -> \"%s\" [color=\"#1976D2\", penwidth=2];\n", idMap[from], idMap[to])
 			} else {
-				fmt.Fprintf(out, "  \"%s\" -> \"%s\";\n", from, to)
+				fmt.Fprintf(out, "  \"%s\" -> \"%s\";\n", idMap[from], idMap[to])
 			}
 		}
 	}
@@ -70,59 +73,58 @@ func RenderDOT(snap *types.Snapshot, filter string, out io.Writer) {
 }
 
 // RenderMermaid generates a Mermaid flowchart from a snapshot.
-func RenderMermaid(snap *types.Snapshot, filter string, out io.Writer) {
+func RenderMermaid(snap *types.Snapshot, filter string, risks map[string]int, out io.Writer) {
 	edges, directMods := buildModuleGraph(snap, filter)
 
 	fmt.Fprintln(out, "graph LR")
 
 	appModule := getAppModule(snap)
+	allModsSorted := getSortedMods(edges)
 
-	// Node IDs must be safe for mermaid (no dots, slashes)
-	idOf := func(mod string) string {
-		r := strings.NewReplacer("/", "_", ".", "_", "-", "_", "@", "_")
-		return r.Replace(mod)
-	}
-
-	// Render app node
-	fmt.Fprintf(out, "  %s[\"%s\"]:::app\n", idOf(appModule), appModule)
-
-	rendered := map[string]bool{appModule: true}
-	allMods := map[string]bool{}
-	for from, tos := range edges {
-		allMods[from] = true
-		for _, to := range tos {
-			allMods[to] = true
+	// Map modules to safe, anonymous IDs
+	idMap := make(map[string]string)
+	idMap[appModule] = "root"
+	nodeCounter := 1
+	for _, mod := range allModsSorted {
+		if mod != appModule {
+			idMap[mod] = fmt.Sprintf("node_%d", nodeCounter)
+			nodeCounter++
 		}
 	}
 
-	// Sort for deterministic output
-	sortedMods := make([]string, 0, len(allMods))
-	for m := range allMods {
-		sortedMods = append(sortedMods, m)
-	}
-	sort.Strings(sortedMods)
+	// Render app node
+	fmt.Fprintf(out, "  %s[\"%s\"]:::app\n", idMap[appModule], "Project Root")
 
-	for _, mod := range sortedMods {
+	rendered := map[string]bool{appModule: true}
+	for _, mod := range allModsSorted {
 		if rendered[mod] {
 			continue
 		}
 		rendered[mod] = true
+		
+		class := "indirect"
 		if directMods[mod] {
-			fmt.Fprintf(out, "  %s[\"%s\"]:::direct\n", idOf(mod), shortName(mod))
-		} else {
-			fmt.Fprintf(out, "  %s[\"%s\"]:::indirect\n", idOf(mod), shortName(mod))
+			class = "direct"
 		}
+		
+		// If high risk, override class
+		risk := risks[mod]
+		if risk >= 7 {
+			class = "highrisk"
+		} else if risk >= 4 {
+			class = "medrisk"
+		}
+
+		fmt.Fprintf(out, "  %s[\"%s\"]:::%s\n", idMap[mod], shortName(mod), class)
 	}
 
 	fmt.Fprintln(out)
 
 	// Render edges
-	for from, tos := range edges {
-		sortedTos := make([]string, len(tos))
-		copy(sortedTos, tos)
-		sort.Strings(sortedTos)
-		for _, to := range sortedTos {
-			fmt.Fprintf(out, "  %s --> %s\n", idOf(from), idOf(to))
+	for _, from := range allModsSorted {
+		tos := edges[from]
+		for _, to := range tos {
+			fmt.Fprintf(out, "  %s --> %s\n", idMap[from], idMap[to])
 		}
 	}
 
@@ -130,6 +132,37 @@ func RenderMermaid(snap *types.Snapshot, filter string, out io.Writer) {
 	fmt.Fprintln(out, "  classDef app fill:#4CAF50,color:white,stroke:#333")
 	fmt.Fprintln(out, "  classDef direct fill:#BBDEFB,stroke:#1976D2")
 	fmt.Fprintln(out, "  classDef indirect fill:#FFF9C4,stroke:#FBC02D,stroke-dasharray: 5 5")
+	fmt.Fprintln(out, "  classDef medrisk fill:#FFE0B2,stroke:#FB8C00")
+	fmt.Fprintln(out, "  classDef highrisk fill:#FFCDD2,stroke:#E53935")
+}
+
+func getNodeColor(mod string, direct bool, risk int) string {
+	if risk >= 7 {
+		return "#FFCDD2" // Red for high risk
+	}
+	if risk >= 4 {
+		return "#FFE0B2" // Orange for med risk
+	}
+	if direct {
+		return "#BBDEFB" // Blue for direct
+	}
+	return "#FFF9C4" // Yellow for indirect
+}
+
+func getSortedMods(edges map[string][]string) []string {
+	modSet := make(map[string]bool)
+	for from, tos := range edges {
+		modSet[from] = true
+		for _, to := range tos {
+			modSet[to] = true
+		}
+	}
+	mods := make([]string, 0, len(modSet))
+	for m := range modSet {
+		mods = append(mods, m)
+	}
+	sort.Strings(mods)
+	return mods
 }
 
 // buildModuleGraph builds module-to-module edges by analyzing the package import graph.
@@ -193,10 +226,8 @@ func buildModuleGraph(snap *types.Snapshot, filter string) (map[string][]string,
 	return edges, directMods
 }
 
-// getAppModule returns the module path of the app itself (first module without a version).
+// getAppModule returns the module path of the app itself.
 func getAppModule(snap *types.Snapshot) string {
-	// The app's own module typically has no version in the snapshot
-	// We look for the target's module path in the packages
 	if snap.Target != "" {
 		for _, p := range snap.Packages {
 			if p.ImportPath == snap.Target || strings.HasPrefix(p.ImportPath, snap.Target) {
@@ -206,38 +237,11 @@ func getAppModule(snap *types.Snapshot) string {
 			}
 		}
 	}
-
-	// Fallback: find the module that most packages belong to
-	modCount := make(map[string]int)
-	for _, p := range snap.Packages {
-		if p.ModulePath != "" && !p.Standard {
-			modCount[p.ModulePath]++
-		}
-	}
-	bestMod := "app"
-	bestCount := 0
-	for mod, count := range modCount {
-		// Prefer modules that are direct (no version = the app itself)
-		found := false
-		for _, m := range snap.Modules {
-			if m.Path == mod && m.Version != "" {
-				found = true
-				break
-			}
-		}
-		if !found && count > bestCount {
-			bestMod = mod
-			bestCount = count
-		}
-	}
-	return bestMod
+	return "app"
 }
 
-// shortName returns the last two path segments of a module path for brevity.
+// shortName returns the last segment of a module path for brevity and anonymity.
 func shortName(modulePath string) string {
 	parts := strings.Split(modulePath, "/")
-	if len(parts) <= 2 {
-		return modulePath
-	}
-	return strings.Join(parts[len(parts)-2:], "/")
+	return parts[len(parts)-1]
 }
