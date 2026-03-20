@@ -36,6 +36,18 @@ type Config struct {
 		Format  string `yaml:"format"`
 		Verbose bool   `yaml:"verbose"`
 	} `yaml:"report"`
+
+	AI struct {
+		Provider string `yaml:"provider"` // gemini | openai (default: gemini)
+		Model    string `yaml:"model"`    // optional, defaults per provider
+		Features struct {
+			PRSummary          bool `yaml:"pr_summary"`
+			SmartRisk          bool `yaml:"smart_risk"`
+			ValidateReason     bool `yaml:"validate_reason"`
+			SuggestAlternatives bool `yaml:"suggest_alternatives"`
+			TrendAnalysis      bool `yaml:"trend_analysis"`
+		} `yaml:"features"`
+	} `yaml:"ai"`
 }
 
 // Default returns a Config with reasonable defaults.
@@ -45,6 +57,13 @@ func Default() *Config {
 	cfg.Build.Output = "/tmp/godepsguard_app"
 	cfg.Report.Format = "markdown"
 	cfg.Report.Verbose = false
+	cfg.AI.Provider = "gemini"
+	// Enable all AI features by default when a key is present
+	cfg.AI.Features.PRSummary = true
+	cfg.AI.Features.SmartRisk = true
+	cfg.AI.Features.ValidateReason = true
+	cfg.AI.Features.SuggestAlternatives = true
+	cfg.AI.Features.TrendAnalysis = true
 	return cfg
 }
 

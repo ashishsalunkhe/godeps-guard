@@ -10,6 +10,66 @@ import (
 	"github.com/ashishsalunkhe/godeps-guard/pkg/types"
 )
 
+// writeAISection appends AI-generated insights to any output format.
+func writeAISection(insights types.AIInsights, warnings []string, out io.Writer) {
+	hasContent := insights.Summary != "" || len(insights.Alternatives) > 0 || len(warnings) > 0
+	if !hasContent {
+		return
+	}
+
+	fmt.Fprintln(out, "\n---\n## 🤖 AI Analysis")
+
+	if insights.Summary != "" {
+		fmt.Fprintln(out, "\n### Summary")
+		fmt.Fprintln(out, insights.Summary)
+	}
+
+	if len(warnings) > 0 {
+		fmt.Fprintln(out, "\n### ⚠️ AI Dependency Concerns")
+		for _, w := range warnings {
+			fmt.Fprintf(out, "- %s\n", w)
+		}
+	}
+
+	if len(insights.Alternatives) > 0 {
+		fmt.Fprintln(out, "\n### 💡 Suggested Lighter Alternatives")
+		for mod, suggestion := range insights.Alternatives {
+			fmt.Fprintf(out, "- **%s**: %s\n", mod, suggestion)
+		}
+	}
+}
+
+// writeAISectionTerminal renders AI insights in terminal-friendly format.
+func writeAISectionTerminal(insights types.AIInsights, warnings []string, out io.Writer) {
+	hasContent := insights.Summary != "" || len(insights.Alternatives) > 0 || len(warnings) > 0
+	if !hasContent {
+		return
+	}
+
+	fmt.Fprintln(out, "\n"+util.Bold+"🤖 AI Analysis"+util.Reset)
+	fmt.Fprintln(out, strings.Repeat("-", 30))
+
+	if insights.Summary != "" {
+		fmt.Fprintln(out, util.Bold+"Summary:"+util.Reset)
+		fmt.Fprintln(out, insights.Summary)
+	}
+
+	if len(warnings) > 0 {
+		fmt.Fprintln(out, util.Bold+"AI Concerns:"+util.Reset)
+		for _, w := range warnings {
+			fmt.Fprintf(out, "  %s %s\n", util.Colorize("→", util.Yellow), w)
+		}
+	}
+
+	if len(insights.Alternatives) > 0 {
+		fmt.Fprintln(out, util.Bold+"Suggested Alternatives:"+util.Reset)
+		for mod, suggestion := range insights.Alternatives {
+			fmt.Fprintf(out, "  %s: %s\n", util.Colorize(mod, util.Cyan), suggestion)
+		}
+	}
+}
+
+
 // Output writes the delta and policy results in the specified format.
 func Output(delta *types.Delta, policy *types.PolicyResult, format string, out io.Writer) error {
 	switch format {
@@ -85,6 +145,13 @@ func writeTerminal(delta *types.Delta, policy *types.PolicyResult, out io.Writer
 			}
 		}
 	}
+
+	// Append AI insights if present
+	var aiWarnings []string
+	if policy != nil {
+		aiWarnings = policy.AIWarnings
+	}
+	writeAISectionTerminal(delta.AI, aiWarnings, out)
 
 	return nil
 }
@@ -233,6 +300,13 @@ func writeMarkdown(delta *types.Delta, policy *types.PolicyResult, out io.Writer
 			fmt.Fprintf(out, "- %s (`%s` -> `%s`)\n", m.Path, m.Before, m.After)
 		}
 	}
+
+	// Append AI insights if present
+	var aiWarnings []string
+	if policy != nil {
+		aiWarnings = policy.AIWarnings
+	}
+	writeAISection(delta.AI, aiWarnings, out)
 
 	return nil
 }

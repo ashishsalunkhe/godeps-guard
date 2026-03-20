@@ -82,7 +82,7 @@ var licensesCmd = &cobra.Command{
 		if licensesFailUnknown {
 			for _, r := range results {
 				if r.License == "Unknown" {
-					fmt.Fprintf(os.Stderr, "\n"+util.Error("Error: undetected licenses found. Use --fail-on-unknown=false to ignore.")+"\n")
+					fmt.Fprintln(os.Stderr, "\n"+util.Error("Error: undetected licenses found. Use --fail-on-unknown=false to ignore."))
 					os.Exit(1)
 				}
 			}

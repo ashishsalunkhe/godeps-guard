@@ -1,0 +1,64 @@
+# .goreleaser.yaml
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    main: ./cmd/godeps-guard
+    binary: godeps-guard
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.Commit}} -X main.date={{.Date}}
+
+archives:
+  - format: tar.gz
+    # this name template makes the OS and Arch compatible with what most people expect.
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    # use zip for windows archives
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+
+brews:
+  - name: godeps-guard
+    repository:
+      owner: ashishsalunkhe
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/ashishsalunkhe/godeps-guard"
+    description: "A Go dependency impact analyzer and CI enforcement tool to prevent binary bloat."
+    license: "MIT" # Assuming MIT, can be adjusted.
+    test: |
+      system "#{bin}/godeps-guard version"
+    install: |
+      bin.install "godeps-guard"

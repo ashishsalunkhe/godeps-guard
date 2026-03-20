@@ -1,0 +1,13 @@
+# Binaries
+godeps-guard
+godeps-guard_base
+/dist/
+
+# Env
+.env
+
+# Dependencies
+vendor/
+
+# OS
+.DS_Store

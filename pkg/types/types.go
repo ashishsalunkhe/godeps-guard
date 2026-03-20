@@ -1,5 +1,13 @@
 package types
 
+// AIInsights carries AI-generated content optionally appended to reports.
+type AIInsights struct {
+	Summary      string            `json:"summary,omitempty"`
+	Alternatives map[string]string `json:"alternatives,omitempty"`
+	TrendReport  string            `json:"trend_report,omitempty"`
+	AIWarnings   []string          `json:"ai_warnings,omitempty"`
+}
+
 // ModuleRef represents a Go module reference.
 type ModuleRef struct {
 	Path     string `json:"path"`
@@ -55,6 +63,9 @@ type Delta struct {
 
 	// Post-v1 Attribution
 	DirectImpacts []ModuleImpact `json:"direct_impacts"`
+
+	// AI-generated insights (populated when --ai flag is used)
+	AI AIInsights `json:"ai,omitempty"`
 }
 
 // PolicyResult holds the results of evaluating the rules.
@@ -62,4 +73,7 @@ type PolicyResult struct {
 	Passed   bool     `json:"passed"`
 	Warnings []string `json:"warnings"`
 	Errors   []string `json:"errors"`
+
+	// AI-generated warnings (populated when --ai flag is used)
+	AIWarnings []string `json:"ai_warnings,omitempty"`
 }

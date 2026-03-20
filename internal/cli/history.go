@@ -1,12 +1,14 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
+	"github.com/ashishsalunkhe/godeps-guard/internal/ai"
 	"github.com/ashishsalunkhe/godeps-guard/internal/config"
 	"github.com/ashishsalunkhe/godeps-guard/internal/git"
 	"github.com/ashishsalunkhe/godeps-guard/internal/graph"
@@ -59,6 +61,8 @@ var historyRecordCmd = &cobra.Command{
 	},
 }
 
+var historyReportAI bool
+
 var historyReportCmd = &cobra.Command{
 	Use:   "report",
 	Short: "Print the historical growth report",
@@ -74,11 +78,11 @@ var historyReportCmd = &cobra.Command{
 
 		fmt.Println("Dependency growth over time")
 		fmt.Println("---------------------------------------------------------")
-		fmt.Printf("%-12s %-10s %-12s %-12s\\n", "Date", "Deps", "Packages", "Binary")
+		fmt.Printf("%-12s %-10s %-12s %-12s\n", "Date", "Deps", "Packages", "Binary")
 		fmt.Println("---------------------------------------------------------")
 
 		for _, r := range hist.Records {
-			fmt.Printf("%-12s %-10d %-12d %-12s\\n",
+			fmt.Printf("%-12s %-10d %-12d %-12s\n",
 				r.Date.Format("2006-01-02"), r.DirectDeps, r.TotalPackages, formatBytes(r.BinarySize))
 		}
 
@@ -86,10 +90,28 @@ var historyReportCmd = &cobra.Command{
 			first := hist.Records[0]
 			last := hist.Records[len(hist.Records)-1]
 			fmt.Println("---------------------------------------------------------")
-			fmt.Printf("Total Growth:\\n")
-			fmt.Printf("Deps:     %+d\\n", last.DirectDeps-first.DirectDeps)
-			fmt.Printf("Packages: %+d\\n", last.TotalPackages-first.TotalPackages)
-			fmt.Printf("Binary:   %s\\n", formatBytesDelta(last.BinarySize-first.BinarySize))
+			fmt.Printf("Total Growth:\n")
+			fmt.Printf("Deps:     %+d\n", last.DirectDeps-first.DirectDeps)
+			fmt.Printf("Packages: %+d\n", last.TotalPackages-first.TotalPackages)
+			fmt.Printf("Binary:   %s\n", formatBytesDelta(last.BinarySize-first.BinarySize))
+		}
+
+		// Feature 6: AI trend analysis (opt-in via --ai)
+		if historyReportAI && len(hist.Records) >= 2 {
+			aiClient, err := ai.NewClientFromEnv()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "⚠️  AI init failed: %v\n", err)
+			} else {
+				fmt.Println("\n⏳ Analyzing trend with AI...")
+				analysis, aErr := aiClient.AnalyzeTrend(context.Background(), hist.Records)
+				if aErr != nil {
+					fmt.Fprintf(os.Stderr, "⚠️  AI trend analysis failed: %v\n", aErr)
+				} else if analysis != "" {
+					fmt.Println("\n🤖 AI Trend Analysis")
+					fmt.Println("---------------------------------------------------------")
+					fmt.Println(analysis)
+				}
+			}
 		}
 
 		return nil
@@ -122,6 +144,7 @@ func formatBytesDelta(b int64) string {
 }
 
 func init() {
+	historyReportCmd.Flags().BoolVar(&historyReportAI, "ai", false, "Enable AI-powered trend analysis (requires GODEPS_GUARD_AI_KEY)")
 	historyCmd.AddCommand(historyRecordCmd)
 	historyCmd.AddCommand(historyReportCmd)
 	rootCmd.AddCommand(historyCmd)

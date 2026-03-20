@@ -93,3 +93,24 @@ func CalculateRisk(impact *types.ModuleImpact, licenses map[string]string, heavy
 	impact.RiskScore = score
 	impact.RiskReasons = reasons
 }
+
+// MergeAIRisk merges AI-enhanced risk score into an existing impact.
+// The static score is used as the floor; AI can raise it but not lower it.
+// This is called after CalculateRisk when AI is enabled.
+func MergeAIRisk(impact *types.ModuleImpact, aiScore int, aiReasons []string) {
+	if aiScore <= 0 {
+		return
+	}
+	if aiScore > impact.RiskScore {
+		impact.RiskScore = aiScore
+	}
+	if impact.RiskScore > 10 { // Cap at 10 after AI merge
+		impact.RiskScore = 10
+	}
+	// Prepend AI reasons with a label so they're distinguishable in the report
+	labeled := make([]string, 0, len(aiReasons))
+	for _, r := range aiReasons {
+		labeled = append(labeled, "🤖 "+r)
+	}
+	impact.RiskReasons = append(labeled, impact.RiskReasons...)
+}

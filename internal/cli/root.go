@@ -5,13 +5,15 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "godeps-guard",
-	Short: "A dependency impact analyzer to prevent binary bloat",
-	Long:  "godeps-guard inspects dependency changes, measures binary bloat, and fails CI if configured thresholds are exceeded.",
+	Use:     "godeps-guard",
+	Short:   "A dependency impact analyzer to prevent binary bloat",
+	Long:    "godeps-guard inspects dependency changes, measures binary bloat, and fails CI if configured thresholds are exceeded.",
+	Version: "dev",
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
-func Execute() error {
+func Execute(version string) error {
+	rootCmd.Version = version
 	return rootCmd.Execute()
 }
 

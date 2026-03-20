@@ -14,5 +14,5 @@ jobs:
       - name: Run godeps-guard
         uses: ./
         with:
-          base_ref: origin/${{ github.base_ref }}
-          config: .godepsguard.yaml
+          base-ref: origin/${{ github.base_ref }}
+          config-file: .godepsguard.yaml

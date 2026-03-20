@@ -155,3 +155,79 @@ godeps-guard sbom --output sbom.json
 - [x] Risk Scoring Mechanism
 - [x] SBOM and License Generation
 - [x] Dependency Graph Visualization
+- [x] AI-Powered Analysis (`--ai` flag)
+
+## AI Features
+
+`godeps-guard` has optional AI-powered analysis. All AI features are **opt-in** — the tool works identically without an API key.
+
+### Setup
+
+You can set these environment variables in your shell or use a `.env` file in your project root (see `.env.example`).
+
+```bash
+export GODEPS_GUARD_AI_PROVIDER=gemini   # gemini (default) | openai
+export GODEPS_GUARD_AI_KEY=<your-key>
+export GODEPS_GUARD_AI_MODEL=gemini-2.0-flash  # optional
+```
+
+### Feature 1: AI PR Review Summary
+Narrates the dependency impact in plain English, replacing raw numbers with a 3-5 sentence assessment and an overall recommendation.
+
+```bash
+godeps-guard check --base origin/main --ai
+```
+
+### Feature 2: Smart Risk Scoring
+Enhances the static risk score for each new dependency using the LLM's knowledge of CVE history, ecosystem reputation, and maintenance status. The static score is the floor; AI can only raise it.
+
+```bash
+godeps-guard check --base origin/main --ai  # risk scores automatically enhanced
+```
+
+### Feature 3: Requirement Validator
+When `require_reason_for_new_direct_dep: true` is set, AI validates whether the implicit justification for each new dependency actually makes sense (checks for overkill, stdlib alternatives, etc.).
+
+```bash
+# Enable in .godepsguard.yaml:
+# policies:
+#   require_reason_for_new_direct_dep: true
+
+godeps-guard check --base origin/main --ai
+```
+
+### Feature 4: Alternative Suggestion Engine
+Suggests lighter alternatives for heavy new dependencies and appends a "💡 Suggested Lighter Alternatives" section to the report.
+
+```bash
+godeps-guard check --base origin/main --ai  # alternatives appear in report
+```
+
+### Feature 5: Historical Trend Anomaly Detection
+Analyzes your recorded dependency history and produces a narrative anomaly report identifying unusual growth periods.
+
+```bash
+godeps-guard history report --ai
+```
+
+### Feature 6: Natural Language Policy Config
+Describe your policy in plain English and have AI generate a `.godepsguard.yaml` for you.
+
+```bash
+godeps-guard init --ai
+# > Block GPL licenses, warn if binary grows more than 5MB, flag AWS SDKs
+```
+
+### AI config block in `.godepsguard.yaml`
+
+```yaml
+ai:
+  provider: gemini          # gemini | openai
+  model: gemini-2.0-flash   # optional
+  features:
+    pr_summary: true
+    smart_risk: true
+    validate_reason: true
+    suggest_alternatives: true
+    trend_analysis: true
+```
